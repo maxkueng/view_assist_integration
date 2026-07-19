@@ -128,36 +128,50 @@ class ConversationAgentTranslator:
 class TimeSentenceTranslator:
     """Translate time sentences to english."""
 
+    FALLBACK_LANGUAGE = "en"
+
     def __init__(self, hass: HomeAssistant, config: VAConfigEntry) -> None:
         """Initialise the translator."""
         self.hass = hass
         self.loaded_lang: str | None = None
         self.lang: dict[str, Any] = {}
+        self.fallback: dict[str, Any] = {}
         self.config = config
 
     def _two_char_locale(self, lang: str) -> str:
         """Convert locale to two character format."""
         return lang[:2]
 
-    def load_language_pack(self, lang: str) -> bool:
-        """Load language pack."""
+    def _read_language_pack(self, lang: str) -> dict[str, Any] | None:
+        """Read a language pack from disk."""
         # Get current path of this file
         p = self.hass.config.path("custom_components", DOMAIN)
         # In case like de-DE, make de
         lang = self._two_char_locale(lang)
         lang_file = Path(p, "translations", "timers", f"{lang}.json")
 
-        if lang_file.is_file():
-            try:
-                with lang_file.open("r", encoding="utf-8") as f:
-                    self.lang = json.load(f)
-                    self.loaded_lang = lang
-                    return True
-            except json.JSONDecodeError:
-                _LOGGER.error("Error reading language pack for %s", lang)
-        else:
-            _LOGGER.error("No language pack found for %s -> %s", lang, lang_file)
+        if not lang_file.is_file():
+            _LOGGER.debug("No language pack found for %s -> %s", lang, lang_file)
+            return None
+        try:
+            with lang_file.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            _LOGGER.error("Error reading language pack for %s", lang)
+        return None
+
+    def load_language_pack(self, lang: str) -> bool:
+        """Load language pack."""
+        if (pack := self._read_language_pack(lang)) is not None:
+            self.lang = pack
+            self.loaded_lang = self._two_char_locale(lang)
+            return True
         return False
+
+    def load_fallback_pack(self) -> None:
+        """Load the language pack used when a translation is missing."""
+        if not self.fallback:
+            self.fallback = self._read_language_pack(self.FALLBACK_LANGUAGE) or {}
 
     def inString(self, string: str, find: str | list[str] | EnumType) -> str | None:
         """Check if any of the find words are in the string."""
@@ -371,18 +385,38 @@ class TimeSentenceTranslator:
         """Translate a response sentence id with optional params."""
         language = self._two_char_locale(locale)
         if not self.loaded_lang or self.loaded_lang != language:
-            result = await self.hass.async_add_executor_job(
+            if not await self.hass.async_add_executor_job(
                 self.load_language_pack, language
-            )
-            if not result:
-                return None
+            ):
+                # Remember the miss so this does not hit the disk on every call,
+                # and drop any pack loaded for a previous locale so we cannot
+                # answer in the wrong language.
+                self.lang = {}
+                self.loaded_lang = language
 
-        responses: dict[str, str] | None = self.lang.get("responses")
-        if not responses:
-            return None
+        if not self.fallback:
+            await self.hass.async_add_executor_job(self.load_fallback_pack)
 
-        sentence = responses.get(sentence_id)
+        sentence = (self.lang.get("responses") or {}).get(sentence_id)
         if not sentence:
+            # Language packs are contributed and go stale as new responses are
+            # added, and a locale may have no pack at all. Answering in English
+            # beats saying nothing, which is what returning None amounts to.
+            sentence = (self.fallback.get("responses") or {}).get(sentence_id)
+            if sentence:
+                _LOGGER.debug(
+                    "No '%s' response for %s, using %s",
+                    sentence_id,
+                    language,
+                    self.FALLBACK_LANGUAGE,
+                )
+        if not sentence:
+            _LOGGER.warning(
+                "No '%s' response in %s or %s language pack",
+                sentence_id,
+                language,
+                self.FALLBACK_LANGUAGE,
+            )
             return None
 
         # set time param to time_{lang} param
