@@ -69,7 +69,9 @@ class ConversationAgentTranslator:
             "timer_none": "No timers are set",
             "timer_list": "You have the following timers set: {timers}",
             "timer_deleted": "Deleted timer {name}",
+            "timers_cancelled": "Cancelled {count} timers",
             "timer_not_found": "No timer called {name} could be found",
+            "timer_not_found_any": "No matching timer could be found",
             "time_remaining": "{remaining} remaining on timer {name}",
             "timer_error": "Unable to decode time or interval information",
         }

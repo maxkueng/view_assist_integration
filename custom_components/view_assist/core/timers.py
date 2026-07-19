@@ -1091,7 +1091,11 @@ class TimerManagerServices:
         return (None, None)
 
     async def create_response(
-        self, response_id: str, timer: Timer | None = None, language: str = "en"
+        self,
+        response_id: str,
+        timer: Timer | None = None,
+        language: str = "en",
+        extra_params: dict[str, Any] | None = None,
     ) -> str:
         """Create a response string for a timer."""
         translator = Translator.get(self.hass)
@@ -1107,6 +1111,8 @@ class TimerManagerServices:
                 "time_en": timer["extra_info"].get("sentence", ""),
                 "snooze_duration": timer["extra_info"].get("snooze_duration", ""),
             }
+        if extra_params:
+            params.update(extra_params)
         return await translator.translate_time_response(response_id, params, language)
 
     async def _async_handle_set_timer(self, call: ServiceCall) -> ServiceResponse:
@@ -1228,17 +1234,26 @@ class TimerManagerServices:
                 cancel_all=cancel_all,
                 just_expired=just_expired,
             )
-            if result:
-                # Every response template expects a {name}, so always supply
-                # one. A bulk cancel lists what went rather than naming one of
-                # them arbitrarily; unnamed timers fall back to their duration.
-                names = ", ".join(t["name"] or t["duration"] for t in result)
+            if len(result) == 1:
+                # Unnamed timers fall back to their duration, so {name} always
+                # resolves to something the listener recognises.
+                timer = result[0]
                 response = await self.create_response(
-                    "timer_cancelled", {"name": names, "extra_info": {}}, language
+                    "timer_cancelled",
+                    {"name": timer["name"] or timer["duration"], "extra_info": {}},
+                    language,
+                )
+            elif result:
+                response = await self.create_response(
+                    "timers_cancelled",
+                    language=language,
+                    extra_params={"count": len(result)},
                 )
             else:
+                # This service is targeted by id, device, entity or "all", never
+                # by name, so the named variant has nothing to substitute.
                 response = await self.create_response(
-                    "timer_not_found", language=language
+                    "timer_not_found_any", language=language
                 )
             return {"response": response}
         return {"error": "no attribute supplied"}
