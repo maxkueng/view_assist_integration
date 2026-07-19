@@ -99,10 +99,10 @@ class ViewAssistSensor(RestoreSensor):
                     "timers",
 
                     # From configuration/runtime_data
-                    "status_icons_size", "menu_config", "font_style", 
-                    "use_24_hour_time", "background", "mode", "view_timeout", 
-                    "weather_entity", "screen_mode", "do_not_disturb", 
-                    "use_announce",
+                    "status_icons_size", "menu_config", "font_style",
+                    "use_24_hour_time", "background", "mode", "view_timeout",
+                    "weather_entity", "screen_mode", "do_not_disturb",
+                    "use_announce", "show_all_timers",
 
                     # Generated/ephemeral
                     "last_updated", "active_overrides",
@@ -271,6 +271,7 @@ class ViewAssistSensor(RestoreSensor):
             "menu_config": d.dashboard.display_settings.menu_config,
             "menu_items": mm.menu_items.copy() if mm else [],
             "menu_active": mm.active if mm else False,
+            "show_all_timers": d.dashboard.display_settings.show_all_timers,
             "font_style": d.dashboard.display_settings.font_style,
             "use_24_hour_time": d.dashboard.display_settings.time_format
             == VATimeFormat.HOUR_24,
