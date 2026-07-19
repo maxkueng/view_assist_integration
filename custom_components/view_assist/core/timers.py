@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 import contextlib
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 import datetime as dt
 from enum import StrEnum
 import inspect
@@ -819,8 +819,24 @@ class TimerManager:
             "created_at": dt.datetime.fromtimestamp(timer.created_at, self.tz),
             "updated_at": dt.datetime.fromtimestamp(timer.updated_at, self.tz),
             "status": timer.status,
-            "extra_info": timer.extra_info,
+            "extra_info": self._serialisable_extra_info(timer.extra_info),
         }
+
+    @staticmethod
+    def _serialisable_extra_info(extra_info: dict[str, Any] | None) -> dict[str, Any]:
+        """Return extra_info with the TimerInfo dataclass rendered as a dict.
+
+        extra_info holds a TimerInfo object because internal callers need it,
+        but this output is published as a sensor attribute and over the
+        websocket. Anything serialising it with a plain JSON encoder — such as
+        mqtt_statestream — raises TypeError and drops the entity entirely.
+        """
+        if not extra_info:
+            return {}
+        timer_info = extra_info.get("timer_info")
+        if not isinstance(timer_info, TimerInfo):
+            return extra_info
+        return {**extra_info, "timer_info": asdict(timer_info)}
 
     async def _wait_for_timer(
         self, timer_id: str, seconds: int, expires_at: int, fire_warning: bool = True
