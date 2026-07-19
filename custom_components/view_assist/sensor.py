@@ -252,7 +252,16 @@ class ViewAssistSensor(RestoreSensor):
         d = self.config.runtime_data.default
 
         tm = TimerManager.get(self.hass)
-        timers = tm.get_timers(entity_id=self.entity_id)
+        # Scope this to what the device actually displays. Otherwise an entity
+        # advertising show_all_timers would still expose only its own timers,
+        # contradicting both its own screen and the websocket payload.
+        try:
+            settings = self.config.runtime_data.dashboard.display_settings
+            show_all = settings.show_all_timers
+        except AttributeError:
+            # Non-display devices have no dashboard settings.
+            show_all = False
+        timers = tm.get_timers(entity_id="" if show_all else self.entity_id)
         return {
             "last_updated": dt.now().isoformat(),
             "do_not_disturb": d.do_not_disturb,
