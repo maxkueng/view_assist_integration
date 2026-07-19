@@ -1,4 +1,4 @@
-import { timerCards } from "./timers.js?v=1.0.29";
+import { timerCards } from "./timers.js?v=1.0.31";
 
 const version = "1.0.29-rc2"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
