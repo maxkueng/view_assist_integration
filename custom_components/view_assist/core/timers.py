@@ -1108,9 +1108,13 @@ class TimerManagerServices:
         else:
             time_type = "interval"
             
-        # Some STT add additional chars.  This removes those that add - or .
+        # Google STT returns durations hyphenated ("5-minute", "10-second").
+        # Replace with a space rather than deleting: the duration patterns take
+        # an optional separator so both parse, but deleting also fuses compound
+        # number words ("forty-five" -> "fortyfive"), which then fail to decode.
+        # Periods are left alone — they are significant in decimals ("2.5").
         if timer_time:
-            timer_time = timer_time.replace("-", "").replace(".", "")
+            timer_time = timer_time.replace("-", " ")
         
         sentence, timer_info = await self.decode_time_sentence(
             timer_time, language=language, time_type=time_type
