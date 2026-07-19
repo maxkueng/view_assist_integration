@@ -1086,7 +1086,11 @@ class TimerManagerServices:
         params = {}
         if timer:
             params = {
-                "name": timer["name"],
+                # Unnamed timers have no name to substitute, and str(None)
+                # reaches the user as the literal word "None". Describe the
+                # timer by its duration instead, which reads correctly in every
+                # response using {name} and needs no new translation keys.
+                "name": timer["name"] or timer.get("duration") or "",
                 f"time_{language}": timer["extra_info"].get("sentence", ""),
                 "time_en": timer["extra_info"].get("sentence", ""),
                 "snooze_duration": timer["extra_info"].get("snooze_duration", ""),
