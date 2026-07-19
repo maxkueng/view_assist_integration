@@ -714,7 +714,10 @@ class TimerManager:
 
         for timer_id in existing_device_timers:
             timer = self.store.timers[timer_id]
-            if timer.expires_at == expires_at:
+            # Name is part of a timer's identity: two timers on one device can
+            # legitimately share an expiry time while being different timers.
+            # Matching on expiry alone silently discards the second one.
+            if timer.expires_at == expires_at and (timer.name or "") == (name or ""):
                 return timer
         return None
 
