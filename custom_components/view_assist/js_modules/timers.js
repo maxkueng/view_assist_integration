@@ -191,14 +191,14 @@ class TimerCards {
         };
     }
 
-    singleTimerCard(timer_id) {
+    singleTimerCard(timer_id, show_all = false) {
         const entity_id = localStorage.getItem("view_assist_sensor");
         let card = null;
 
         // If not timers return empty list
         if (!window.viewassist?.config?.timers) return card;
 
-        const timer = window.viewassist.config?.timers.find(t => t.id === timer_id && (t.entity_id === entity_id || !entity_id));
+        const timer = window.viewassist.config?.timers.find(t => t.id === timer_id && (show_all || t.entity_id === entity_id || !entity_id));
         if (!timer) return card;
 
         let name = timer.name;

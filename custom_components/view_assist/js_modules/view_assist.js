@@ -1,4 +1,4 @@
-import { timerCards } from "./timers.js?v=1.0.28";
+import { timerCards } from "./timers.js?v=1.0.29";
 
 const version = "1.0.29-rc2"
 const TIMEOUT_ERROR = "SELECTTREE-TIMEOUT";
@@ -310,7 +310,7 @@ class ViewAssistHelpers {
     if (timerCount > 1) {
       return timerCards.timerCards(show_all);
     } else {
-      return timerCards.singleTimerCard(window.viewassist.config.timers[0].id);
+      return timerCards.singleTimerCard(window.viewassist.config.timers[0].id, show_all);
     }
   }
 
