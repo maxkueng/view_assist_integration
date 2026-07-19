@@ -596,17 +596,18 @@ class TimerManager:
             if device_domain == "esphome":
                 timers = [timer for timer in timers if timer["id"] in tm.timers]
 
-            # Filter by name if supplied
-            if name:
-                # Match on name or plural of name
-                name = str(name).strip()
-                timers = [
-                    timer
-                    for timer in timers
-                    if timer["name"] == name
-                    or str(timer["duration"]).startswith(name)
-                    or timer["time"] == name
-                ]
+        # Filter by name if supplied. Applies whatever the scope, so that an
+        # unscoped query for a named timer does not silently return every timer.
+        if name:
+            # Match on name or plural of name
+            name = str(name).strip()
+            timers = [
+                timer
+                for timer in timers
+                if timer["name"] == name
+                or str(timer["duration"]).startswith(name)
+                or timer["time"] == name
+            ]
 
         if sort and timers:
             timers = sorted(timers, key=lambda d: d["expiry"]["seconds"])
