@@ -51,6 +51,11 @@ class WordsToDigits:
 
         units = "one|two|three|four|five|six|seven|eight|nine"
 
+        # Speech pipelines render compounds hyphenated ("forty-five") or run
+        # together ("fortynine"). Every pattern below joins across whitespace
+        # only, so without this the whole string passes through unconverted.
+        s = re.sub(rf"\b({tens})-?({units})\b", r"\1 \2", s)
+
         word_pattern = rf"(?:^|\s)({tens}) ({units})(?:$|\s)"
         if matches := re.findall(word_pattern, s):
             for m in matches:
