@@ -1000,6 +1000,7 @@ class TimerManagerServices:
             vol.Exclusive(ATTR_DEVICE_ID, "target"): vol.Any(cv.string, None),
             vol.Exclusive(ATTR_REMOVE_ALL, "target"): bool,
             vol.Optional(ATTR_JUST_EXPIRED): bool,
+            vol.Optional(ATTR_LANGUAGE): str,
         }
     )
 
@@ -1007,6 +1008,7 @@ class TimerManagerServices:
         {
             vol.Required(ATTR_TIMER_ID): str,
             vol.Required(ATTR_TIME): str,
+            vol.Optional(ATTR_LANGUAGE): str,
         }
     )
 
@@ -1215,6 +1217,7 @@ class TimerManagerServices:
         device_id = call.data.get(ATTR_DEVICE_ID)
         cancel_all = call.data.get(ATTR_REMOVE_ALL, False)
         just_expired = call.data.get(self.ATTR_JUST_EXPIRED, False)
+        language = call.data.get(ATTR_LANGUAGE, "en")
 
         if any([timer_id, entity_id, device_id, cancel_all]):
             tm = TimerManager.get(self.hass)
@@ -1231,10 +1234,12 @@ class TimerManagerServices:
                 # them arbitrarily; unnamed timers fall back to their duration.
                 names = ", ".join(t["name"] or t["duration"] for t in result)
                 response = await self.create_response(
-                    "timer_cancelled", {"name": names, "extra_info": {}}
+                    "timer_cancelled", {"name": names, "extra_info": {}}, language
                 )
             else:
-                response = await self.create_response("timer_not_found")
+                response = await self.create_response(
+                    "timer_not_found", language=language
+                )
             return {"response": response}
         return {"error": "no attribute supplied"}
 
