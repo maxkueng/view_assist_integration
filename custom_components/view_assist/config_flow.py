@@ -67,6 +67,7 @@ from .const import (
     CONF_ROTATE_BACKGROUND_LINKED_ENTITY,
     CONF_ROTATE_BACKGROUND_PATH,
     CONF_SCREEN_MODE,
+    CONF_SHOW_ALL_TIMERS,
     CONF_STATUS_ICON_SIZE,
     CONF_STATUS_ICONS,
     CONF_TIME_FORMAT,
@@ -317,6 +318,7 @@ async def get_dashboard_options_schema(
                 custom_value=True,
             )
         ),
+        vol.Optional(CONF_SHOW_ALL_TIMERS): BooleanSelector(),
     }
 
     BACKGROUND_SETTINGS.update(background_extra)

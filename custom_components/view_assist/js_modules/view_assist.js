@@ -303,7 +303,7 @@ class ViewAssistHelpers {
     }
   }
 
-  timerCards(show_all = false) {
+  timerCards(show_all = window.viewassist?.config?.show_all_timers ?? false) {
     const timerCount = window.viewassist.config.timers.length;
     if (timerCount == 0) return timerCards.noTimersCard();
 

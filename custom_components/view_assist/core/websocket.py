@@ -193,6 +193,14 @@ class WebsocketListenerHandler:
         if event.event_name == VAEventType.BROWSER_REGISTERED:
             self.start()
 
+    @staticmethod
+    def _show_all_timers(config: VAConfigEntry | None) -> bool:
+        """Return whether this device displays timers set on any VA device."""
+        try:
+            return bool(config.runtime_data.dashboard.display_settings.show_all_timers)
+        except AttributeError:
+            return False
+
     @callback
     def _send_event(self, event: VAEvent):
         """Send event to connection."""
@@ -200,8 +208,9 @@ class WebsocketListenerHandler:
         # Send timers if timer event
         if event.event_name == VAEventType.TIMER_UPDATE:
             if timers := TimerManager.get(self.hass):
+                scope = "" if self._show_all_timers(self.config) else self.entity_id
                 event.payload = timers.get_timers(
-                    entity_id=self.entity_id, include_expired=True
+                    entity_id=scope, include_expired=True
                 )
 
         # Add config data to event
@@ -254,8 +263,9 @@ class WebsocketListenerHandler:
             data = config.runtime_data
             timer_info = {}
             if timers := TimerManager.get(self.hass):
+                scope = "" if self._show_all_timers(config) else self.entity_id
                 timer_info = timers.get_timers(
-                    entity_id=self.entity_id, include_expired=True
+                    entity_id=scope, include_expired=True
                 )
 
             menu_info = {}
@@ -292,6 +302,7 @@ class WebsocketListenerHandler:
                     "display_device_id": data.core.display_device,
                     "menu": menu_info,
                     "timers": timer_info,
+                    "show_all_timers": self._show_all_timers(config),
                     "background": data.dashboard.background_settings.background,
                     "dashboard": data.dashboard.dashboard,
                     "home": data.dashboard.home
