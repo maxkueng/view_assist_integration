@@ -511,8 +511,12 @@ class TimerManager:
         entity_id: str | None = None,
         cancel_all: bool = False,
         just_expired: bool = False,
-    ) -> bool:
-        """Cancel timer by timer id, device id or all."""
+    ) -> list[dict[str, Any]]:
+        """Cancel timers by timer id, device id, entity id or all.
+
+        Returns the timers that were cancelled, so callers can describe them.
+        Empty means nothing matched, which is falsy for existing callers.
+        """
         if timer_id:
             timer_ids = [timer_id] if self.store.timers.get(timer_id) else []
         elif device_id or entity_id:
@@ -529,8 +533,9 @@ class TimerManager:
         elif cancel_all:
             timer_ids = self.store.timers.copy().keys()
 
+        cancelled: list[dict[str, Any]] = []
         if timer_ids:
-            for timerid in timer_ids:
+            for timerid in list(timer_ids):
                 if (
                     just_expired
                     and self.store.timers[timerid].status != TimerStatus.EXPIRED
@@ -542,15 +547,20 @@ class TimerManager:
                     if device_domain == "esphome":
                         await self._cancel_intent_timer(timerid)
 
+                # Capture before cancelling; the timer is gone afterwards and
+                # the caller needs it to describe what was cancelled.
+                details = self.format_timer_output(timer) if timer else None
+
                 if await self.store.cancel_timer(timerid):
                     _LOGGER.debug("Cancelled timer: %s", timerid)
                     if timer_task := self.timer_tasks.pop(timerid, None):
                         if not timer_task.done():
                             timer_task.cancel()
 
-                    return True
+                    if details:
+                        cancelled.append(details)
 
-        return False
+        return cancelled
 
     def get_timers(
         self,
@@ -1215,9 +1225,16 @@ class TimerManagerServices:
                 cancel_all=cancel_all,
                 just_expired=just_expired,
             )
-            response = await self.create_response(
-                "timer_cancelled" if result else "timer_not_found"
-            )
+            if result:
+                # Every response template expects a {name}, so always supply
+                # one. A bulk cancel lists what went rather than naming one of
+                # them arbitrarily; unnamed timers fall back to their duration.
+                names = ", ".join(t["name"] or t["duration"] for t in result)
+                response = await self.create_response(
+                    "timer_cancelled", {"name": names, "extra_info": {}}
+                )
+            else:
+                response = await self.create_response("timer_not_found")
             return {"response": response}
         return {"error": "no attribute supplied"}
 
