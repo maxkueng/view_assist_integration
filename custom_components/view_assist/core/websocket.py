@@ -404,16 +404,16 @@ def setup_websocket_commands(hass: HomeAssistant) -> None:
     async def handle_get_timer_by_name(
         hass: HomeAssistant, connection: ActiveConnection, msg: dict
     ) -> None:
-        """Get entity id by browser id."""
+        """Get timers matching a name for the device behind a browser id."""
         entity = get_entity_id_by_browser_id(hass, msg["browser_id"])
         if not entity:
-            output = get_mimic_entity_id(hass)
+            # Fall back to the mimicked device, and use it as the lookup scope
+            # rather than returning it as the result.
+            entity = get_mimic_entity_id(hass)
 
-        if entity:
-            timer_name = msg["name"]
-            timers = TimerManager.get(hass)
-
-            output = timers.get_timers(device_or_entity_id=entity, name=timer_name)
+        output = []
+        if entity and (timers := TimerManager.get(hass)):
+            output = timers.get_timers(entity_id=entity, name=msg["name"])
 
         connection.send_result(msg["id"], output)
 
