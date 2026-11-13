@@ -894,8 +894,7 @@ class TimerManager:
         device_domain = get_mic_device_domain(self.hass, timer.entity_id)
         if device_domain == "esphome":
             await self._finish_intent_timer(timer_id)
-        else:
-            await self._fire_event(timer_id, TimerEvent.EXPIRED)
+        await self._fire_event(timer_id, TimerEvent.EXPIRED)
 
     async def _start_intent_timer(self, timer: Timer, retry: bool = True) -> None:
         """Send intent to VA intent handler."""
