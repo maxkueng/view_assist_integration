@@ -313,6 +313,7 @@ class TimerManager:
 
         self.store = VATimerStore(hass)
         self.timer_tasks: dict[str, asyncio.Task] = {}
+        self.finished_intent_timers: dict[str, IntentTimerInfo] = {}
 
     async def async_setup(self) -> bool:
         """Set up the Timer Manager."""
@@ -960,17 +961,24 @@ class TimerManager:
         if timer := self.store.timers.get(timer_id):
             device_id = get_mic_device_id_from_entity_id(self.hass, timer.entity_id)
             tm: IntentTimerManager = self.hass.data[TIMER_DATA]
-            if timer := tm.timers.pop(timer_id):
+            if timer := tm.timers.pop(timer_id, None):
                 timer.finish()
+                self.finished_intent_timers[timer_id] = timer
                 if device_id in tm.handlers:
                     tm.handlers[device_id](TimerEventType.FINISHED, timer)
 
     async def _cancel_intent_timer(self, timer_id: str) -> bool:
-        """Cancel intent timer by timer id."""
+        """Cancel intent timer by timer id.
+
+        A finished timer is still cancelled on the device so it stops ringing.
+        """
         if timer := self.store.timers.get(timer_id):
             device_id = get_mic_device_id_from_entity_id(self.hass, timer.entity_id)
             tm: IntentTimerManager = self.hass.data[TIMER_DATA]
-            if timer := tm.timers.pop(timer_id):
+            timer = tm.timers.pop(timer_id, None) or self.finished_intent_timers.pop(
+                timer_id, None
+            )
+            if timer:
                 timer.cancel()
                 if device_id in tm.handlers:
                     tm.handlers[device_id](TimerEventType.CANCELLED, timer)
